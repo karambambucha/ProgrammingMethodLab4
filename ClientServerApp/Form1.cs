@@ -19,9 +19,11 @@ namespace ClientServerApp
         static int portNumber = 8080;
         TcpListener serverSocket;
         TcpClient clientSocket;
+        Thread ThreadingServer;
+        Thread ThreadingClient;
         public Form1()
         {
-            InitializeComponent(); 
+            InitializeComponent();
             CheckForIllegalCrossThreadCalls = false;
         }
         #region [ SERVER  ]
@@ -30,7 +32,7 @@ namespace ClientServerApp
             try
             {
                 serverSocket = new TcpListener(IPAddress.Parse(textBox1.Text), portNumber);
-                Thread ThreadingServer = new Thread(StartServer);
+                ThreadingServer = new Thread(StartServer);
                 ThreadingServer.Start();
                 ServerOffButton.Enabled = true;
                 ServerOnButton.Enabled = false;
@@ -51,10 +53,15 @@ namespace ClientServerApp
             serverSocket.Start();
             Invoke(DelegateRecieveMessage, $"Сервер включён в {DateTime.Now}. Порт в режиме ожидания соединения...");
             clientSocket = serverSocket.AcceptTcpClient();
-            ServerTextBox.Text += $"Клиент подключен с адреса: {(IPEndPoint)clientSocket.Client.RemoteEndPoint} {DateTime.Now}\n";
-            SendList();
-            while (true)
+            while (clientSocket.Connected)
             {
+                ServerTextBox.Text += $"Клиент подключен с адреса: {(IPEndPoint)clientSocket.Client.RemoteEndPoint} {DateTime.Now}\n";
+                List<DirectoryInfo> drives = new List<DirectoryInfo>();
+                foreach (var drive in DriveInfo.GetDrives())
+                {
+                    drives.Add(drive.RootDirectory);
+                }
+                SendList(drives);
                 try
                 {
                     NetworkStream networkStream = clientSocket.GetStream();
@@ -65,7 +72,6 @@ namespace ClientServerApp
                     string serverResponse;
                     if (dataFromClient == "Тест")
                     {
-
                         serverResponse = "Принято!";
                     }
                     else
@@ -79,33 +85,54 @@ namespace ClientServerApp
                 }
                 catch
                 {
+                    Invoke(DelegateRecieveMessage, $"Клиент отключился в {DateTime.Now}. Порт в режиме ожидания соединения...");
                     serverSocket.Stop();
                     serverSocket.Start();
-                    Invoke(DelegateRecieveMessage, $"Перезагрузка сервера...");
                     clientSocket = serverSocket.AcceptTcpClient();
-                    Invoke(DelegateRecieveMessage, $"Перезагрузка... Сервер включён в {DateTime.Now}. Порт в режиме ожидания соединения...");
                 }
             }
         }
-        private void SendList()
+        private void SendList(List<DirectoryInfo> items)
         {
-            string listOfDevices = "Список писек";
-            byte[] listBytes = Encoding.UTF8.GetBytes(listOfDevices);
+            string disks = "";
+            foreach (var item in items)
+            {
+                if (disks != "")
+                    disks += ",";
+                disks += item.FullName;
+            }
+            string message = "Диски: " + disks;
+            byte[] listBytes = Encoding.UTF8.GetBytes(message);
             NetworkStream networkStream = clientSocket.GetStream();
             networkStream.Write(listBytes, 0, listBytes.Length);
             networkStream.Flush();
         }
+        private void ServerOffButton_Click(object sender, EventArgs e)
+        {
+            ServerTextBox.Text += $"Сервер отключен {DateTime.Now}\n";
+            serverSocket.Stop();
+            ThreadingClient.Suspend();
+            ThreadingServer.Suspend();
+            ServerOnButton.Enabled = true;
+
+            ServerOffButton.Enabled = false;
+            DisconnectButton.Enabled = false;
+            SendToServerButton.Enabled = false;
+            ConnectButton.Enabled = false;
+            SendToClientButton.Enabled = false;
+        }
         #endregion
 
         #region [ CLIENT  ]
-        TcpClient tcpClient = new TcpClient();
+        TcpClient tcpClient;
         private void ConnectButton_Click(object sender, EventArgs e)
         {
             try
             {
+                tcpClient = new TcpClient();
                 tcpClient.Connect(IPAddress.Parse(textBox1.Text), portNumber);
                 ClientTextBox.Text += $"Подключено к серверу! {DateTime.Now}\n"; 
-                Thread ThreadingClient = new Thread(AcceptResponses);
+                ThreadingClient = new Thread(AcceptResponses);
                 ThreadingClient.Start();
                 DisconnectButton.Enabled = true;
                 SendToServerButton.Enabled = true;
@@ -128,9 +155,23 @@ namespace ClientServerApp
 
                     clientStream.Read(bb, 0, 100);
                     string serverResponse = Encoding.UTF8.GetString(bb);
-
-                    ClientTextBox.Text += $"Клиент получил ответ от сервера: {serverResponse}";
-                    ClientTextBox.Text += $" {DateTime.Now}\n";
+                    if(serverResponse.Contains("Диски: "))
+                    {
+                        ClientTextBox.Text += $"Клиент получил ответ от сервера: {serverResponse}";
+                        ClientTextBox.Text += $" {DateTime.Now}\n";
+                        serverResponse = serverResponse.Replace("Диски: ", "");
+                        string[] directories = serverResponse.Split(',');
+                        foreach (string dir  in directories)
+                        {
+                            comboBox1.Items.Add(dir);
+                        }
+                    }
+                    else
+                    {
+                        ClientTextBox.Text += $"Клиент получил ответ от сервера: {serverResponse}";
+                        ClientTextBox.Text += $" {DateTime.Now}\n";
+                    }
+                    
                 }
                 catch (Exception ex)
                 {
@@ -156,7 +197,30 @@ namespace ClientServerApp
             }
             
         }
+        private void DisconnectButton_Click(object sender, EventArgs e)
+        {
+            try
+            {
+                tcpClient.Close();
+                ThreadingClient.Suspend();
+                ClientTextBox.Text += $"Клиент отключен от сервера в {DateTime.Now}\n";
+                DisconnectButton.Enabled = false;
+                SendToServerButton.Enabled = false;
+                ConnectButton.Enabled = true;
+                SendToClientButton.Enabled = false;
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.ToString(), "Ошибка!", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
         #endregion
 
+        void comboBox1_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            string selectedState = comboBox1.SelectedItem.ToString();
+        }
+
+        
     }
 }

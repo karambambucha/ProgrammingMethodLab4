@@ -42,6 +42,7 @@ namespace ClientServerApp
             this.SendToServerButton = new System.Windows.Forms.Button();
             this.DisconnectButton = new System.Windows.Forms.Button();
             this.ConnectButton = new System.Windows.Forms.Button();
+            this.comboBox1 = new System.Windows.Forms.ComboBox();
             this.SuspendLayout();
             // 
             // label3
@@ -90,6 +91,7 @@ namespace ClientServerApp
             this.ServerOffButton.TabIndex = 28;
             this.ServerOffButton.Text = "Отключить сервер";
             this.ServerOffButton.UseVisualStyleBackColor = true;
+            this.ServerOffButton.Click += new System.EventHandler(this.ServerOffButton_Click);
             // 
             // ServerOnButton
             // 
@@ -157,6 +159,7 @@ namespace ClientServerApp
             this.DisconnectButton.TabIndex = 36;
             this.DisconnectButton.Text = "Отключиться от сервера";
             this.DisconnectButton.UseVisualStyleBackColor = true;
+            this.DisconnectButton.Click += new System.EventHandler(this.DisconnectButton_Click);
             // 
             // ConnectButton
             // 
@@ -169,11 +172,20 @@ namespace ClientServerApp
             this.ConnectButton.UseVisualStyleBackColor = true;
             this.ConnectButton.Click += new System.EventHandler(this.ConnectButton_Click);
             // 
+            // comboBox1
+            // 
+            this.comboBox1.FormattingEnabled = true;
+            this.comboBox1.Location = new System.Drawing.Point(12, 23);
+            this.comboBox1.Name = "comboBox1";
+            this.comboBox1.Size = new System.Drawing.Size(358, 24);
+            this.comboBox1.TabIndex = 42;
+            // 
             // Form1
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(8F, 16F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(1007, 565);
+            this.Controls.Add(this.comboBox1);
             this.Controls.Add(this.SendToServerButton);
             this.Controls.Add(this.DisconnectButton);
             this.Controls.Add(this.ConnectButton);
@@ -209,6 +221,7 @@ namespace ClientServerApp
         private System.Windows.Forms.Button SendToServerButton;
         private System.Windows.Forms.Button DisconnectButton;
         private System.Windows.Forms.Button ConnectButton;
+        private System.Windows.Forms.ComboBox comboBox1;
     }
 }
 
