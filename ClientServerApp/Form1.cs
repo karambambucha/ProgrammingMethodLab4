@@ -17,9 +17,6 @@ namespace ClientServerApp
     public partial class Form1 : Form
     {
         static int portNumber = 8080;
-        TcpListener serverSocket;
-        TcpClient clientSocket;
-        Thread ThreadingServer;
         Thread ThreadingClient;
         public Form1()
         {
@@ -27,6 +24,10 @@ namespace ClientServerApp
             CheckForIllegalCrossThreadCalls = false;
         }
         #region [ SERVER  ]
+
+        TcpListener serverSocket;
+        TcpClient clientSocket;
+        Thread ThreadingServer;
         private void ServerOnButton_Click(object sender, EventArgs e)
         {
             try
@@ -111,7 +112,6 @@ namespace ClientServerApp
         {
             ServerTextBox.Text += $"Сервер отключен {DateTime.Now}\n";
             serverSocket.Stop();
-            ThreadingClient.Suspend();
             ThreadingServer.Suspend();
             ServerOnButton.Enabled = true;
 
@@ -131,7 +131,7 @@ namespace ClientServerApp
             {
                 tcpClient = new TcpClient();
                 tcpClient.Connect(IPAddress.Parse(textBox1.Text), portNumber);
-                ClientTextBox.Text += $"Подключено к серверу! {DateTime.Now}\n"; 
+                ClientTextBox.Text += $"Подключено к серверу! {DateTime.Now}\n";
                 ThreadingClient = new Thread(AcceptResponses);
                 ThreadingClient.Start();
                 DisconnectButton.Enabled = true;
@@ -146,7 +146,7 @@ namespace ClientServerApp
         }
         private void AcceptResponses()
         {
-            while (true)
+            while (tcpClient.Connected)
             {
                 try
                 {
@@ -155,10 +155,10 @@ namespace ClientServerApp
 
                     clientStream.Read(bb, 0, 100);
                     string serverResponse = Encoding.UTF8.GetString(bb);
-                    if(serverResponse.Contains("Диски: "))
+                    ClientTextBox.Text += $"Клиент получил ответ от сервера: {serverResponse}";
+                    ClientTextBox.Text += $" {DateTime.Now}\n";
+                    if (serverResponse.Contains("Диски: "))
                     {
-                        ClientTextBox.Text += $"Клиент получил ответ от сервера: {serverResponse}";
-                        ClientTextBox.Text += $" {DateTime.Now}\n";
                         serverResponse = serverResponse.Replace("Диски: ", "");
                         string[] directories = serverResponse.Split(',');
                         foreach (string dir  in directories)
@@ -168,16 +168,13 @@ namespace ClientServerApp
                     }
                     else
                     {
-                        ClientTextBox.Text += $"Клиент получил ответ от сервера: {serverResponse}";
-                        ClientTextBox.Text += $" {DateTime.Now}\n";
+
                     }
-                    
                 }
                 catch (Exception ex)
                 {
                     MessageBox.Show(ex.ToString(), "Ошибка!", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 }
-
             }
         }
         private void SendToServerButton_Click(object sender, EventArgs e)
@@ -220,7 +217,5 @@ namespace ClientServerApp
         {
             string selectedState = comboBox1.SelectedItem.ToString();
         }
-
-        
     }
 }
